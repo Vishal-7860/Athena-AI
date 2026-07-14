@@ -1,0 +1,242 @@
+openapi: 3.0.3
+info:
+  title: AI-powered Research Paper System API
+  description: API for searching, downloading, extracting, and summarizing research papers with AI.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000/api
+    description: Local development server
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - username
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                username:
+                  type: string
+                password:
+                  type: string
+                  minLength: 6
+      responses:
+        '201':
+          description: User registered successfully
+        '400':
+          description: Invalid input or email already exists
+
+  /auth/login:
+    post:
+      summary: Log in a user and obtain tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      username:
+                        type: string
+                      email:
+                        type: string
+                      role:
+                        type: string
+        '401':
+          description: Unauthorized (Invalid credentials)
+
+  /auth/refresh:
+    post:
+      summary: Refresh JWT token
+      security:
+        - RefreshTokenAuth: []
+      responses:
+        '200':
+          description: New access token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+
+  /papers/search:
+    get:
+      summary: Search for research papers across APIs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: Search keywords
+          required: true
+          schema:
+            type: string
+        - name: provider
+          in: query
+          description: Specific research API provider (arxiv, semantic_scholar, openalex, crossref, or all)
+          schema:
+            type: string
+            default: all
+        - name: year
+          in: query
+          description: Filter by publication year
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of research papers found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResearchPaper'
+
+  /papers/download:
+    post:
+      summary: Automatically download a PDF and upload to Cloudinary
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - external_pdf_url
+                - source
+              properties:
+                title:
+                  type: string
+                external_pdf_url:
+                  type: string
+                  format: uri
+                source:
+                  type: string
+      responses:
+        '200':
+          description: PDF downloaded and stored successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  paper_id:
+                    type: string
+                  pdf_url:
+                    type: string
+                    format: uri
+
+  /ai/summarize:
+    post:
+      summary: Generate AI summaries using Gemini
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - paper_id
+              properties:
+                paper_id:
+                  type: string
+                format:
+                  type: string
+                  enum: [short, detailed, bullets, key_findings]
+                  default: detailed
+      responses:
+        '200':
+          description: Summary generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary_id:
+                    type: string
+                  short_summary:
+                    type: string
+                  detailed_summary:
+                    type: string
+                  bullet_summary:
+                    type: array
+                    items:
+                      type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    RefreshTokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ResearchPaper:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        authors:
+          type: array
+          items:
+            type: string
+        year:
+          type: integer
+        journal:
+          type: string
+        citation_count:
+          type: integer
+        abstract:
+          type: string
+        pdf_url:
+          type: string
+        external_pdf_url:
+          type: string
+        source:
+          type: string

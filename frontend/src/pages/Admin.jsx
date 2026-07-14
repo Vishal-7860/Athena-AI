@@ -1,0 +1,284 @@
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../services/api';
+import { 
+  Users, 
+  FileText, 
+  Sparkles, 
+  Layers, 
+  TrendingUp, 
+  Terminal, 
+  ShieldCheck, 
+  Database,
+  RefreshCw
+} from 'lucide-react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+// Register ChartJS plugins
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+
+export default function Admin() {
+  // Fetch Admin Analytics
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
+    queryKey: ['adminAnalytics'],
+    queryFn: async () => {
+      const response = await api.get('/admin/analytics');
+      return response.data;
+    },
+    refetchOnWindowFocus: false
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4">
+        <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading system-wide metrics...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 max-w-md mx-auto text-center">
+        <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mb-2">
+          <ShieldCheck size={24} className="text-red-500 rotate-180" />
+        </div>
+        <h3 className="text-lg font-bold text-slate-800 dark:text-white">Failed to Access Admin Data</h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          {error.response?.data?.message || 'Access denied. You must be authenticated as an Administrator.'}
+        </p>
+        <button 
+          onClick={() => refetch()}
+          className="mt-2 flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition"
+        >
+          <RefreshCw size={16} /> Retry Connection
+        </button>
+      </div>
+    );
+  }
+
+  // Destructure response payload
+  const { users = {}, documents = {}, keyword_trends = [], activity_logs = [] } = data || {};
+
+  // Metrics configurations
+  const metricCards = [
+    { 
+      name: 'System Users', 
+      value: users.total || 0, 
+      subtext: `${users.admins || 0} Admins • ${users.standard || 0} Standard`,
+      icon: Users,
+      color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' 
+    },
+    { 
+      name: 'Document Database', 
+      value: documents.papers || 0, 
+      subtext: `${documents.downloads || 0} Cached PDFs • ${documents.bookmarks || 0} Saves`,
+      icon: FileText, 
+      color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+    },
+    { 
+      name: 'Summaries Processed', 
+      value: documents.summaries || 0, 
+      subtext: `Avg Citations: ${documents.average_citations || 0}`,
+      icon: Sparkles, 
+      color: 'bg-brand-500/10 text-brand-600 dark:text-brand-400'
+    },
+    { 
+      name: 'Literature Matrices', 
+      value: documents.reviews || 0, 
+      subtext: 'Comparative review files',
+      icon: Layers, 
+      color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+    }
+  ];
+
+  // Build Bar Chart Data
+  const chartLabels = keyword_trends.length > 0 
+    ? keyword_trends.map(t => t.keyword) 
+    : ['No Data'];
+  const chartValues = keyword_trends.length > 0 
+    ? keyword_trends.map(t => t.count) 
+    : [0];
+
+  const barChartData = {
+    labels: chartLabels,
+    datasets: [
+      {
+        label: 'Searches Count',
+        data: chartValues,
+        backgroundColor: 'rgba(139, 92, 246, 0.65)',
+        borderColor: '#8b5cf6',
+        borderWidth: 1.5,
+        borderRadius: 6
+      }
+    ]
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        titleColor: '#fff',
+        bodyColor: '#cbd5e1',
+        borderColor: '#334155',
+        borderWidth: 1
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          color: '#64748b',
+          font: {
+            family: 'Inter, sans-serif',
+            size: 11
+          }
+        }
+      },
+      y: {
+        grid: {
+          color: 'rgba(148, 163, 184, 0.08)'
+        },
+        ticks: {
+          color: '#64748b',
+          stepSize: 1,
+          font: {
+            family: 'Inter, sans-serif'
+          }
+        }
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            <ShieldCheck className="text-purple-600 dark:text-purple-400" size={32} />
+            Admin Operations Panel
+          </h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Monitor system-wide database volume, API operations, and query analytics.
+          </p>
+        </div>
+        <div>
+          <button 
+            disabled={isFetching}
+            onClick={() => refetch()}
+            className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-brand-500 hover:border-brand-500/40 rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50"
+          >
+            <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
+            {isFetching ? 'Refreshing...' : 'Force Refresh'}
+          </button>
+        </div>
+      </div>
+
+      {/* Metric Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {metricCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div 
+              key={card.name} 
+              className="glass-panel border border-slate-200/50 dark:border-slate-800/50 rounded-xl p-6 shadow-sm flex items-center justify-between hover:border-brand-500/30 transition-all duration-300 group"
+            >
+              <div className="space-y-1.5 overflow-hidden">
+                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{card.name}</p>
+                <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white tracking-tight">{card.value}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{card.subtext}</p>
+              </div>
+              <div className={`w-12 h-12 rounded-lg ${card.color} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
+                <Icon size={22} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Two Column Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Keywords trends chart */}
+        <div className="glass-panel border border-slate-200/50 dark:border-slate-800/50 rounded-xl p-6 shadow-sm lg:col-span-2 flex flex-col h-[380px]">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                <TrendingUp size={16} className="text-brand-500" />
+                Popular Search Terms
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Total searches mapped across core research publications</p>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0">
+            {keyword_trends.length > 0 ? (
+              <Bar data={barChartData} options={chartOptions} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-400 text-sm">
+                No active keyword metrics in database.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Live system logs timeline */}
+        <div className="glass-panel border border-slate-200/50 dark:border-slate-800/50 rounded-xl p-6 shadow-sm flex flex-col h-[380px]">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                <Terminal size={16} className="text-purple-500" />
+                System Audit Trail
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Recent server audit triggers</p>
+            </div>
+            <Database size={15} className="text-slate-400" />
+          </div>
+          <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 font-mono text-[11px] text-slate-600 dark:text-slate-400">
+            {activity_logs.length > 0 ? (
+              activity_logs.map((log) => (
+                <div key={log.id} className="p-2.5 rounded bg-slate-100/50 dark:bg-slate-900/40 border border-slate-200/30 dark:border-slate-800/30">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-bold text-purple-600 dark:text-purple-400 text-[10px] uppercase">
+                      {log.action}
+                    </span>
+                    <span className="text-[9px] text-slate-400">
+                      {new Date(log.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans">{log.details}</p>
+                </div>
+              ))
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-400">
+                No audit logs loaded.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

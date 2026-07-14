@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply transition-colors duration-200;
+  }
+}
+
+/* Custom premium scrollbar for dark and light modes */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 dark:bg-slate-800 rounded-full hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors;
+}
+
+/* Glassmorphism card utility */
+.glass-panel {
+  @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/50;
+}
+
+.glass-panel-heavy {
+  @apply bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border border-slate-200 dark:border-slate-800;
+}
+
+/* Grid overlay background effect */
+.grid-bg {
+  background-image: radial-gradient(rgba(139, 92, 246, 0.08) 1px, transparent 0), radial-gradient(rgba(139, 92, 246, 0.08) 1px, transparent 0);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+}
+
+.dark .grid-bg {
+  background-image: radial-gradient(rgba(139, 92, 246, 0.04) 1px, transparent 0), radial-gradient(rgba(139, 92, 246, 0.04) 1px, transparent 0);
+}
