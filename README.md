@@ -85,6 +85,61 @@ graph LR
 
 ---
 
+## 🌐 Production Deployment Guide
+
+### 1. MongoDB Atlas Database Setup (User ID & Password)
+1. Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) and sign in or create a free account.
+2. Create an **M0 Free Shared Cluster**.
+3. Under **Database Access**, create a Database User:
+   - **Username**: `your_username`
+   - **Password**: `your_password`
+   - **User Privileges**: `Read and write to any database`
+4. Under **Network Access**, click **Add IP Address** and add `0.0.0.0/0` (Allows access from deployment hosts like Render/Vercel).
+5. Click **Database** -> **Connect** -> **Drivers** (Python).
+6. Copy your connection string:
+   ```text
+   mongodb+srv://<username>:<password>@cluster0.abcde.mongodb.net/athena_ai?retryWrites=true&w=majority
+   ```
+   *(Replace `<username>` and `<password>` with your actual Atlas DB user credentials).*
+
+---
+
+### 2. Deploy Backend (Render.com - Free Tier)
+1. Sign up / Log in to [Render](https://render.com/).
+2. Click **New +** -> **Web Service**.
+3. Connect your GitHub repository: `https://github.com/Vishal-7860/Athena-AI`.
+4. Configure service parameters:
+   - **Name**: `athena-ai-backend`
+   - **Root Directory**: `backend`
+   - **Runtime**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt && python -m spacy download en_core_web_sm`
+   - **Start Command**: `gunicorn run:app`
+5. Under **Environment Variables**, add:
+   - `MONGO_URI`: `mongodb+srv://<username>:<password>@cluster0.abcde.mongodb.net/athena_ai?retryWrites=true&w=majority`
+   - `JWT_SECRET`: `your_random_secret_key_here`
+   - `GEMINI_API_KEY`: `your_google_gemini_api_key`
+   - `FLASK_ENV`: `production`
+   - *(Optional)* `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+6. Click **Create Web Service**. Save your deployed backend URL (e.g., `https://athena-ai-backend.onrender.com`).
+
+---
+
+### 3. Deploy Frontend (Vercel - Free Tier)
+1. Sign up / Log in to [Vercel](https://vercel.com/).
+2. Click **Add New...** -> **Project**.
+3. Import your GitHub repository: `https://github.com/Vishal-7860/Athena-AI`.
+4. Configure framework settings:
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: `frontend`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+5. Under **Environment Variables**, add:
+   - `VITE_API_BASE_URL`: `https://athena-ai-backend.onrender.com` (Your Render backend URL)
+6. Click **Deploy**.
+
+---
+
 ## 🛡️ License
 
 This project is licensed under the MIT License - see the `LICENSE` file for details.
+
