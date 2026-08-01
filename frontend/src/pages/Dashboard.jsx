@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { motion } from 'framer-motion';
 import { 
   FileText, 
   Bookmark, 
@@ -158,16 +159,16 @@ export default function Dashboard() {
       {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Welcome back, {user?.username || 'Researcher'}!
+          <h1 className="text-3.5xl font-black tracking-tight text-slate-900 dark:text-white">
+            Welcome back, <span className="bg-gradient-to-r from-brand-600 to-indigo-650 dark:from-brand-400 dark:to-indigo-400 bg-clip-text text-transparent">{user?.username || 'Researcher'}</span>!
           </h1>
-          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
             Here's an overview of your research projects and AI summary activities.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg flex items-center gap-1.5">
-            <Calendar size={14} />
+          <span className="text-xs font-semibold px-3 py-2 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-350 rounded-xl border border-slate-200/50 dark:border-slate-800/60 flex items-center gap-1.5 shadow-sm">
+            <Calendar size={14} className="text-brand-500" />
             Academic Portal v1.0
           </span>
         </div>
@@ -175,31 +176,36 @@ export default function Dashboard() {
 
       {/* Metrics Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => {
+        {stats.map((stat, idx) => {
           const Icon = stat.icon;
           return (
-            <div 
+            <motion.div 
               key={stat.name}
               onClick={() => navigate(stat.path)}
-              className="glass-panel hover:border-brand-500/40 dark:hover:border-brand-500/40 transition-all duration-300 rounded-xl p-6 shadow-sm flex items-center justify-between group cursor-pointer hover:shadow-md hover:scale-[1.02]"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: idx * 0.05 }}
+              whileHover={{ y: -4, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="glass-panel border border-slate-200/60 dark:border-slate-800/70 hover:border-brand-500/40 dark:hover:border-brand-500/40 rounded-2xl p-6 flex items-center justify-between group cursor-pointer hover:shadow-lg hover:shadow-brand-500/5"
             >
               <div className="space-y-2">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{stat.name}</p>
-                <h3 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">{stat.value}</h3>
-                <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{stat.name}</p>
+                <h3 className="text-3xl font-extrabold text-slate-850 dark:text-white tracking-tight">{stat.value}</h3>
+                <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full ${
                   stat.changeType === 'increase' 
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450'
                     : stat.changeType === 'info'
                     ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400'
                 }`}>
                   {stat.change}
                 </span>
               </div>
-              <div className="w-12 h-12 rounded-lg bg-brand-500/10 dark:bg-brand-500/20 flex items-center justify-center text-brand-600 dark:text-brand-400 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 rounded-xl bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/10 flex items-center justify-center text-brand-600 dark:text-brand-400 group-hover:scale-110 transition-transform">
                 <Icon size={22} />
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
@@ -207,31 +213,41 @@ export default function Dashboard() {
       {/* Visual Analytics Sections */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Trend Chart (Takes 2 columns) */}
-        <div className="glass-panel rounded-xl p-6 shadow-sm lg:col-span-2 flex flex-col h-[350px]">
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="glass-panel border border-slate-200/60 dark:border-slate-800/70 rounded-2xl p-6 lg:col-span-2 flex flex-col h-[350px]"
+        >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">Analysis Trends</h3>
+              <h3 className="text-lg font-bold text-slate-850 dark:text-white">Analysis Trends</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">Monthly publication queries volume</p>
             </div>
-            <span className="text-xs font-semibold text-brand-500 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1 cursor-pointer">
+            <span className="text-xs font-semibold text-brand-500 hover:text-brand-600 dark:hover:text-brand-400 flex items-center gap-1 cursor-pointer transition-colors">
               Full Analytics <ArrowUpRight size={14} />
             </span>
           </div>
           <div className="flex-1 min-h-0">
             <Line data={chartData} options={chartOptions} />
           </div>
-        </div>
+        </motion.div>
 
         {/* Activity Timeline (Takes 1 column) */}
-        <div className="glass-panel rounded-xl p-6 shadow-sm flex flex-col h-[350px]">
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.25 }}
+          className="glass-panel border border-slate-200/60 dark:border-slate-800/70 rounded-2xl p-6 flex flex-col h-[350px]"
+        >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">Recent Activity</h3>
+              <h3 className="text-lg font-bold text-slate-850 dark:text-white">Recent Activity</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">Your latest platform interactions</p>
             </div>
             <Clock size={16} className="text-slate-400" />
           </div>
-          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+          <div className="flex-1 overflow-y-auto space-y-3.5 pr-1">
             {recentActivity.map((activity) => {
               const Icon = activity.icon;
               const isClickable = !!activity.paper_id || activity.action === 'REVIEW COMPILED';
@@ -239,26 +255,26 @@ export default function Dashboard() {
                 <div 
                   key={activity.id} 
                   onClick={() => handleActivityClick(activity)}
-                  className={`flex gap-3 text-sm p-2 rounded-lg transition-all ${
+                  className={`flex gap-3 text-sm p-2 rounded-xl transition-all ${
                     isClickable 
-                      ? 'hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer border border-transparent hover:border-slate-200/50 dark:hover:border-slate-700/50' 
+                      ? 'hover:bg-slate-100 dark:hover:bg-slate-900/60 cursor-pointer border border-transparent hover:border-slate-200/50 dark:hover:border-slate-800/60' 
                       : ''
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-full ${activity.color} flex items-center justify-center shrink-0`}>
+                  <div className={`w-8 h-8 rounded-lg ${activity.color} flex items-center justify-center shrink-0 border border-current/10 shadow-sm`}>
                     <Icon size={14} />
                   </div>
                   <div className="overflow-hidden flex-1">
                     <h4 className="font-semibold text-slate-800 dark:text-slate-200 truncate">{activity.action}</h4>
-                    <p className="text-xs text-slate-550 dark:text-slate-400 truncate">{activity.detail}</p>
-                    <span className="text-[10px] text-slate-400 font-medium block mt-0.5">{activity.date}</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{activity.detail}</p>
+                    <span className="text-[9px] text-slate-400 font-medium block mt-0.5">{activity.date}</span>
                   </div>
                   {isClickable && <ChevronRight size={14} className="text-slate-400 self-center" />}
                 </div>
               );
             })}
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

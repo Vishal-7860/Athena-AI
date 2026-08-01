@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply transition-colors duration-200;
+    @apply transition-colors duration-200 antialiased selection:bg-brand-500/30 selection:text-brand-900 dark:selection:text-brand-100;
   }
 }
 
@@ -19,16 +19,46 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 dark:bg-slate-800 rounded-full hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors;
+  @apply bg-slate-200 dark:bg-slate-800 rounded-full hover:bg-brand-400 dark:hover:bg-brand-600 transition-colors;
 }
 
-/* Glassmorphism card utility */
+/* Glassmorphism card utilities */
 .glass-panel {
-  @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/50;
+  @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm transition-all duration-300;
 }
 
 .glass-panel-heavy {
-  @apply bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border border-slate-200 dark:border-slate-800;
+  @apply bg-white/90 dark:bg-slate-900/80 backdrop-blur-2xl border border-slate-200/70 dark:border-slate-800/80 shadow-xl transition-all duration-300;
+}
+
+.glass-input {
+  @apply bg-white/50 dark:bg-slate-950/40 backdrop-blur-sm border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all duration-200;
+}
+
+/* Premium radial gradient backgrounds */
+.radial-glow {
+  background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 0% 0%, rgba(168, 85, 247, 0.08) 0%, transparent 40%);
+}
+
+.dark .radial-glow {
+  background: radial-gradient(circle at 50% -20%, rgba(139, 92, 246, 0.12) 0%, transparent 60%),
+              radial-gradient(circle at 0% 100%, rgba(91, 33, 182, 0.05) 0%, transparent 50%);
+}
+
+/* Animated gradient background */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-text {
+  background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 50%, #6366f1 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 6s ease infinite;
 }
 
 /* Grid overlay background effect */
@@ -40,4 +70,14 @@
 
 .dark .grid-bg {
   background-image: radial-gradient(rgba(139, 92, 246, 0.04) 1px, transparent 0), radial-gradient(rgba(139, 92, 246, 0.04) 1px, transparent 0);
+}
+
+/* Pulse glow effect */
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(1); opacity: 0.5; filter: blur(40px); }
+  50% { transform: scale(1.15); opacity: 0.8; filter: blur(60px); }
+}
+
+.glow-orb {
+  animation: pulse-glow 8s ease-in-out infinite;
 }

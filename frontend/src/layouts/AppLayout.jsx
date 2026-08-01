@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/common/Sidebar';
 import Navbar from '../components/common/Navbar';
 import { X, LayoutDashboard, Search, Bookmark, ShieldCheck, LogOut, Sparkles, Settings } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AppLayout() {
   const { isAuthenticated, user, logout, isAdmin, loading } = useAuth();
@@ -42,7 +43,7 @@ export default function AppLayout() {
       {/* Mobile Drawer Menu (Slide-out Overlay) */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden bg-slate-900/60 backdrop-blur-sm">
-          <div className="relative flex flex-col w-72 max-w-sm bg-slate-900 text-slate-300 p-6 animate-slide-in shadow-2xl">
+          <div className="relative flex flex-col w-72 max-w-sm bg-slate-905 text-slate-300 p-6 animate-slide-in shadow-2xl">
             {/* Close Button */}
             <button
               onClick={() => setMobileMenuOpen(false)}
@@ -67,7 +68,7 @@ export default function AppLayout() {
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3.5 rounded-lg text-sm font-medium transition-colors ${
                       location.pathname === item.path
-                        ? 'bg-brand-600 text-white'
+                        ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
                         : 'hover:bg-slate-800 hover:text-white'
                     }`}
                   >
@@ -79,7 +80,7 @@ export default function AppLayout() {
 
               {isAdmin && (
                 <div className="pt-6 border-t border-slate-800 mt-6">
-                  <span className="px-4 text-xs font-semibold uppercase tracking-wider text-slate-500 block mb-2">
+                  <span className="px-4 text-xs font-semibold uppercase tracking-wider text-slate-505 block mb-2">
                     Administration
                   </span>
                   <Link
@@ -129,9 +130,19 @@ export default function AppLayout() {
         {/* Navbar */}
         <Navbar onMobileMenuToggle={() => setMobileMenuOpen(true)} />
 
-        {/* Dynamic Nested Route Page Body */}
+        {/* Dynamic Nested Route Page Body with Motion Transitions */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
-          <Outlet />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
     </div>

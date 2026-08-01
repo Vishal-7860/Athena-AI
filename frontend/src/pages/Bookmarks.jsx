@@ -19,6 +19,17 @@ import {
   HelpCircle
 } from 'lucide-react';
 
+const parseMarkdownBold = (text) => {
+  if (!text) return '';
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index} className="font-extrabold text-black dark:text-white bg-brand-500/5 dark:bg-brand-500/10 px-1 rounded">{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+};
+
 export default function Bookmarks() {
   const queryClient = useQueryClient();
   const [selectedCitation, setSelectedCitation] = useState(null); // Paper metadata for citation modal
@@ -413,27 +424,27 @@ export default function Bookmarks() {
                 </p>
               </div>
             ) : generatedSummary ? (
-              <div className="space-y-6 text-sm leading-relaxed text-slate-800 dark:text-slate-250 font-sans">
-                <div className="space-y-2">
-                  <h4 className="text-xs font-extrabold uppercase text-slate-400 dark:text-slate-500 tracking-wider">
+              <div className="space-y-6 text-sm md:text-base leading-relaxed text-slate-900 dark:text-slate-50 font-sans max-w-4xl mx-auto py-2">
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider">
                     {summaryFormat.replace('_', ' ')} Summary
                   </h4>
                   {summaryFormat === 'short' ? (
-                    <p className="bg-slate-55/60 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200/35 dark:border-slate-800/30 italic">
-                      {generatedSummary.summary}
+                    <p className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200/50 dark:border-slate-800/40 text-slate-900 dark:text-white text-base font-semibold leading-relaxed shadow-sm">
+                      {parseMarkdownBold(generatedSummary.summary)}
                     </p>
                   ) : summaryFormat === 'bullets' ? (
-                    <ul className="list-disc pl-5 space-y-2 text-xs">
+                    <ul className="list-disc pl-5 space-y-3.5 text-slate-900 dark:text-slate-100 text-sm md:text-base font-medium leading-relaxed">
                       {generatedSummary.summary.split('\n').map((line, i) => {
                         const cleanLine = line.replace(/^[-*•\d.\s]+/, '').trim();
                         if (!cleanLine) return null;
-                        return <li key={i}>{cleanLine}</li>;
+                        return <li key={i} className="pl-1">{parseMarkdownBold(cleanLine)}</li>;
                       })}
                     </ul>
                   ) : (
-                    <div className="prose dark:prose-invert text-xs leading-relaxed space-y-4">
+                    <div className="prose dark:prose-invert text-sm md:text-base leading-relaxed space-y-5 text-slate-900 dark:text-slate-100 font-medium">
                       {generatedSummary.summary.split('\n\n').map((para, i) => (
-                        <p key={i}>{para}</p>
+                        <p key={i}>{parseMarkdownBold(para)}</p>
                       ))}
                     </div>
                   )}

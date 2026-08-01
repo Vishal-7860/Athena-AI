@@ -48,7 +48,7 @@ def seed_database():
         
         if not existing_user:
             salt = bcrypt.gensalt()
-            hashed_password = bcrypt.hashpw("admin123".encode('utf-8'), salt).decode('utf-8')
+            hashed_password = bcrypt.hashpw("rabhvidh".encode('utf-8'), salt).decode('utf-8')
             
             admin_user = {
                 "username": "admin",
@@ -61,7 +61,7 @@ def seed_database():
             }
             
             db.users.insert_one(admin_user)
-            print(f"Seeded admin user: {test_email} / password: admin123")
+            print(f"Seeded admin user: {test_email} / password: rabhvidh")
         else:
             print(f"Admin user {test_email} already exists. Skipping seed.")
             
