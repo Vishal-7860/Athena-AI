@@ -96,12 +96,17 @@ export default function Bookmarks() {
       // Find corresponding bookmarked paper to see if it requires section extraction
       const bookmark = bookmarks?.find(b => b.paper.id === paperId);
       if (bookmark && !bookmark.paper.extracted_sections) {
-        toast.info(`Extracting sections from '${bookmark.paper.title}'...`);
-        const extRes = await api.post('/papers/extract', { paper_id: paperId });
-        if (extRes.data?.credits !== undefined) {
-          updateCredits(extRes.data.credits);
+        try {
+          toast.info(`Extracting sections from '${bookmark.paper.title}'...`);
+          const extRes = await api.post('/papers/extract', { paper_id: paperId });
+          if (extRes.data?.credits !== undefined) {
+            updateCredits(extRes.data.credits);
+          }
+          queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+        } catch (e) {
+          // Non-blocking fallback to metadata abstract summarization if PDF extraction fails
+          console.warn('PDF extraction skipped or failed, using metadata fallback:', e);
         }
-        queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
       }
 
       const response = await api.post('/ai/summarize', {

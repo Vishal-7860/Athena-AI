@@ -18,27 +18,32 @@ try:
 except Exception as e:
     logger.error(f"Error configuring Gemini SDK: {e}")
 
-def _generate_gemini_content(prompt: str) -> str:
+def _generate_gemini_content(prompt: str, custom_key: str = None) -> str:
     """
-    Sends prompt to gemini-pro/gemini-1.5-flash and returns the clean text response.
+    Sends prompt to Gemini API with model fallback handling.
     """
-    global gemini_ready
-    if gemini_ready:
+    api_key_to_use = custom_key or os.environ.get('GEMINI_API_KEY')
+    if api_key_to_use:
         try:
-            # Using modern model endpoint
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(prompt)
-            if response and response.text:
-                return response.text.strip()
+            genai.configure(api_key=api_key_to_use)
+            for model_name in ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']:
+                try:
+                    model = genai.GenerativeModel(model_name)
+                    response = model.generate_content(prompt)
+                    if response and response.text:
+                        return response.text.strip()
+                except Exception as model_err:
+                    logger.warning(f"Model {model_name} failed: {model_err}. Trying fallback model...")
         except Exception as e:
             logger.error(f"Gemini API request failed: {e}. Falling back.")
             
     return ""
 
-def generate_paper_summary(paper_title: str, sections: dict, format_type: str = 'detailed') -> dict:
+def generate_paper_summary(paper_title: str, sections: dict, format_type: str = 'detailed', custom_key: str = None) -> dict:
     """
     Uses Gemini to generate structured summaries for research papers.
     """
+    sections = sections or {}
     abstract = sections.get('abstract', '')
     introduction = sections.get('introduction', '')
     methodology = sections.get('methodology', '')
@@ -65,7 +70,7 @@ def generate_paper_summary(paper_title: str, sections: dict, format_type: str = 
     prompt = prompts.get(format_type, prompts['detailed'])
     logger.info(f"Triggering Gemini summary generation (format: {format_type}) for '{paper_title}'...")
     
-    raw_response = _generate_gemini_content(prompt)
+    raw_response = _generate_gemini_content(prompt, custom_key=custom_key)
     
     if raw_response:
         # Success response mapping
@@ -79,7 +84,7 @@ def generate_paper_summary(paper_title: str, sections: dict, format_type: str = 
     logger.warning("Using mock generator fallback for paper summary.")
     return _generate_mock_paper_summary(paper_title, sections, format_type)
 
-def generate_literature_synthesis(papers_list: list) -> dict:
+def generate_literature_synthesis(papers_list: list, custom_key: str = None) -> dict:
     """
     Synthesizes multiple papers, building comparison tables and gaps matrices.
     """
@@ -87,7 +92,7 @@ def generate_literature_synthesis(papers_list: list) -> dict:
     for idx, paper in enumerate(papers_list):
         title = paper.get('title', 'Paper ' + str(idx))
         abstract = paper.get('abstract', '')
-        sections = paper.get('extracted_sections', {})
+        sections = paper.get('extracted_sections', {}) or {}
         methodology = sections.get('methodology', '')
         results = sections.get('results', '')
         
@@ -108,7 +113,7 @@ def generate_literature_synthesis(papers_list: list) -> dict:
     Ensure your output is valid JSON.
     """
     
-    raw_response = _generate_gemini_content(prompt)
+    raw_response = _generate_gemini_content(prompt, custom_key=custom_key)
     
     if raw_response:
         try:

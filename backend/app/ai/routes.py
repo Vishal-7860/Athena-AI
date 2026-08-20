@@ -27,6 +27,7 @@ def summarize_paper():
     db = get_db()
     user_id = request.current_user['_id']
     data = request.get_json() or {}
+    custom_api_key = request.headers.get('X-Gemini-API-Key')
     
     paper_id = data.get('paper_id')
     format_type = data.get('format', 'detailed').strip().lower()
@@ -40,13 +41,14 @@ def summarize_paper():
         if not paper:
             return jsonify({'message': 'Research paper not found in records.'}), 404
             
-        # Ensure paper text sections are extracted. If not, raise warning to extract first
-        sections = paper.get('extracted_sections')
-        if not sections:
-            return jsonify({
-                'message': 'This paper has not been parsed yet. Please run extraction first.',
-                'require_extraction': True
-            }), 400
+        # Extracted sections or metadata fallback
+        sections = paper.get('extracted_sections') or {
+            'abstract': paper.get('abstract', ''),
+            'introduction': f"Title: {paper.get('title', '')}. Year: {paper.get('year', '')}.",
+            'methodology': paper.get('abstract', ''),
+            'results': paper.get('abstract', ''),
+            'conclusion': paper.get('abstract', '')
+        }
             
         # Check if user already generated this format for this paper to return cache
         existing_summary = db.summaries.find_one({
@@ -73,7 +75,7 @@ def summarize_paper():
             return jsonify({'message': err_msg, 'credits': rem_credits, 'required_credits': 1}), 402
             
         # Trigger Gemini summary creation
-        res = generate_paper_summary(paper['title'], sections, format_type)
+        res = generate_paper_summary(paper['title'], sections, format_type, custom_key=custom_api_key)
         summary_text = res.get('summary_text', '')
         
         if not summary_text:
@@ -132,6 +134,7 @@ def generate_review():
     db = get_db()
     user_id = request.current_user['_id']
     data = request.get_json() or {}
+    custom_api_key = request.headers.get('X-Gemini-API-Key')
     
     paper_ids = data.get('paper_ids', [])
     title = data.get('title', 'Literature Synthesis').strip()
@@ -156,13 +159,14 @@ def generate_review():
         if len(papers_list) != len(paper_ids):
             return jsonify({'message': 'One or more paper IDs could not be found in records.'}), 404
             
-        # Ensure all papers have sections extracted
+        # Ensure all papers have sections extracted or fallback abstract
         for paper in papers_list:
             if not paper.get('extracted_sections'):
-                return jsonify({
-                    'message': f"Paper '{paper.get('title')}' must be extracted/parsed before review synthesis.",
-                    'unextracted_paper_id': str(paper['_id'])
-                }), 400
+                paper['extracted_sections'] = {
+                    'abstract': paper.get('abstract', ''),
+                    'methodology': paper.get('abstract', ''),
+                    'results': paper.get('abstract', '')
+                }
                 
         # Check and deduct 3 credits for literature review synthesis
         success, rem_credits, err_msg = check_and_deduct_credits(db, user_id, 3)
@@ -170,7 +174,7 @@ def generate_review():
             return jsonify({'message': err_msg, 'credits': rem_credits, 'required_credits': 3}), 402
             
         # Trigger literature review synthesis
-        review_data = generate_literature_synthesis(papers_list)
+        review_data = generate_literature_synthesis(papers_list, custom_key=custom_api_key)
         
         # Save literature review document
         review_document = {
