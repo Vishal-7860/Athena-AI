@@ -10,6 +10,9 @@ RUN npm ci
 
 COPY . .
 
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 # Run production React Vite build compilation
 RUN npm run build
 

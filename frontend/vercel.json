@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://athena-ai-40sa.onrender.com/api/:path*"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import { 
@@ -11,17 +12,19 @@ import {
   ChevronRight,
   TrendingUp,
   Bookmark,
-  Activity
+  Activity,
+  CreditCard
 } from 'lucide-react';
 
 export default function LiteratureReview() {
   const queryClient = useQueryClient();
+  const { updateCredits } = useAuth();
   const [selectedPapers, setSelectedPapers] = useState([]);
-  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewTitle, setReviewTitle] = useState('Comparative Literature Synthesis');
   const [activeTab, setActiveTab] = useState('synthesis'); // 'synthesis' | 'table' | 'similarity'
   const [comparisonResults, setComparisonResults] = useState(null);
 
-  // 1. Fetch Bookmarks
+  // 1. Fetch user bookmarks to select papers from
   const { data: bookmarks, isLoading: loadingBookmarks } = useQuery({
     queryKey: ['bookmarks'],
     queryFn: async () => {
@@ -30,23 +33,29 @@ export default function LiteratureReview() {
     }
   });
 
-  // 2. Generate Synthesis Mutation
+  // 2. Generate Literature Review Mutation
   const reviewMutation = useMutation({
     mutationFn: async (paperIds) => {
-      const titleText = reviewTitle.trim() || `Review: ${paperIds.length} Publications`;
       const response = await api.post('/ai/review', {
-        title: titleText,
-        paper_ids: paperIds
+        paper_ids: paperIds,
+        title: reviewTitle
       });
       return response.data;
     },
     onSuccess: (data) => {
       toast.success('Literature review compiled successfully!');
+      if (data.credits !== undefined) {
+        updateCredits(data.credits);
+      }
       // Trigger similarity comparison in parallel
       similarityMutation.mutate(selectedPapers);
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Failed to compile review.');
+      if (err.response?.status === 402) {
+        toast.error(err.response?.data?.message || 'Insufficient AI credits (Requires 3 Credits). Claim daily bonus in profile!');
+      } else {
+        toast.error(err.response?.data?.message || 'Failed to compile review.');
+      }
     }
   });
 
@@ -98,12 +107,19 @@ export default function LiteratureReview() {
   // Helper mutation to run section parsing if they haven't been processed yet
   const runExtraction = async (paperId) => {
     try {
-      await api.post('/papers/extract', { paper_id: paperId });
+      const res = await api.post('/papers/extract', { paper_id: paperId });
       toast.success('Extraction complete! Please re-run literature review.');
+      if (res.data?.credits !== undefined) {
+        updateCredits(res.data.credits);
+      }
       // Refetch bookmarks to get updated state
       queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
     } catch (e) {
-      toast.error('Failed to parse paper sections automatically.');
+      if (e.response?.status === 402) {
+        toast.error('Insufficient AI credits for PDF extraction (1 Credit needed).');
+      } else {
+        toast.error('Failed to parse paper sections automatically.');
+      }
     }
   };
 

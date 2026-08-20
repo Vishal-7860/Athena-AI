@@ -1,0 +1,83 @@
+name: Automated Production Build & Deployment Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  # ==========================================
+  # Job 1: Test Suite & Code Quality Checks
+  # ==========================================
+  test-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Backend Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          python -m spacy download en_core_web_sm
+
+      - name: Execute Pytest Suite
+        env:
+          SECRET_KEY: test-secret-key-12345
+          JWT_SECRET_KEY: test-jwt-secret-key-67890
+          MONGO_URI: mongodb://localhost:27017/test_db
+        run: |
+          python -m pytest backend/tests
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Verify Frontend Compilation
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+  # ==========================================
+  # Job 2: Build & Verify Multi-Container Stack
+  # ==========================================
+  docker-deploy-check:
+    needs: test-and-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Launch Docker Compose Stack
+        run: |
+          docker compose up --build -d
+
+      - name: Verify Container Health Status
+        run: |
+          echo "Waiting for services to become healthy..."
+          sleep 15
+          docker compose ps
+          
+          # Health check backend REST endpoint
+          curl --fail --retry 5 --retry-delay 3 http://localhost:5000/api/status || exit 1
+          
+          # Health check frontend Nginx endpoint
+          curl --fail --retry 5 --retry-delay 3 http://localhost:3000 || exit 1
+
+      - name: Tear Down Deploy Check Stack
+        if: always()
+        run: |
+          docker compose down -v

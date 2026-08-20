@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import { 
@@ -32,6 +33,7 @@ const parseMarkdownBold = (text) => {
 
 export default function Bookmarks() {
   const queryClient = useQueryClient();
+  const { updateCredits } = useAuth();
   const [selectedCitation, setSelectedCitation] = useState(null); // Paper metadata for citation modal
   const [copiedFormat, setCopiedFormat] = useState(null);
   
@@ -56,10 +58,11 @@ export default function Bookmarks() {
   // 2. Remove Bookmark Mutation
   const removeMutation = useMutation({
     mutationFn: async (bookmarkId) => {
-      await api.delete(`/bookmarks/${bookmarkId}`);
+      const response = await api.delete(`/bookmarks/${bookmarkId}`);
+      return response.data;
     },
     onSuccess: () => {
-      toast.success('Removed paper from your library.');
+      toast.success('Bookmark removed from library!');
       queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
     },
     onError: (err) => {
@@ -72,8 +75,9 @@ export default function Bookmarks() {
     mutationFn: async (paper) => {
       const response = await api.post('/papers/download', {
         title: paper.title,
-        external_pdf_url: paper.external_pdf_url,
-        source: paper.source
+        external_pdf_url: paper.external_pdf_url || paper.pdf_url,
+        source: paper.source,
+        paper_metadata: paper
       });
       return response.data;
     },
@@ -93,7 +97,10 @@ export default function Bookmarks() {
       const bookmark = bookmarks?.find(b => b.paper.id === paperId);
       if (bookmark && !bookmark.paper.extracted_sections) {
         toast.info(`Extracting sections from '${bookmark.paper.title}'...`);
-        await api.post('/papers/extract', { paper_id: paperId });
+        const extRes = await api.post('/papers/extract', { paper_id: paperId });
+        if (extRes.data?.credits !== undefined) {
+          updateCredits(extRes.data.credits);
+        }
         queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
       }
 
@@ -105,10 +112,17 @@ export default function Bookmarks() {
     },
     onSuccess: (data) => {
       setGeneratedSummary(data);
+      if (data.credits !== undefined) {
+        updateCredits(data.credits);
+      }
       toast.success('AI summary generated successfully!');
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Failed to generate summary.');
+      if (err.response?.status === 402) {
+        toast.error(err.response?.data?.message || 'Insufficient AI credits. Claim daily bonus in profile!');
+      } else {
+        toast.error(err.response?.data?.message || 'Failed to generate summary.');
+      }
     }
   });
 

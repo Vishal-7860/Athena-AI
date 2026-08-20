@@ -12,6 +12,14 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    networks:
+      - athena_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # ==========================================
   # Backend Flask REST Service
@@ -25,16 +33,21 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - MONGO_URI=mongodb://mongodb:27017/ai_research_db
-      - FLASK_ENV=production
-      - SECRET_KEY=replace-with-a-very-long-random-string-in-prod
-      - JWT_SECRET_KEY=replace-with-another-secure-jwt-key-in-prod
-      - GEMINI_API_KEY=your_gemini_api_key
-      - CLOUDINARY_CLOUD_NAME=your_cloud_name
-      - CLOUDINARY_API_KEY=your_api_key
-      - CLOUDINARY_API_SECRET=your_api_secret
+      - MONGO_URI=${MONGO_URI:-mongodb://mongodb:27017/ai_research_db}
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - SECRET_KEY=${SECRET_KEY:-replace-with-a-very-long-random-string-in-prod}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-replace-with-another-secure-jwt-key-in-prod}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - PORT=5000
+      - HOST=0.0.0.0
+    networks:
+      - athena_network
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
 
   # ==========================================
   # Frontend React Web Client
@@ -47,8 +60,15 @@ services:
     restart: always
     ports:
       - "3000:80"
+    networks:
+      - athena_network
     depends_on:
       - backend
 
+networks:
+  athena_network:
+    driver: bridge
+
 volumes:
   mongodb_data:
+

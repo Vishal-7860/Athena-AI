@@ -137,11 +137,30 @@ def extract_paper_content():
         if paper.get('extracted_sections') and paper.get('keywords'):
             paper['id'] = str(paper['_id'])
             del paper['_id']
+            user_doc = db.users.find_one({'_id': request.current_user['_id']})
+            role = user_doc.get('role', 'user') if user_doc else 'user'
+            rem_credits = user_doc.get('credits', 999999 if role == 'admin' else 50) if user_doc else 50
             return jsonify({
                 'message': 'Loaded cached extraction results.',
-                'paper': paper
+                'paper': paper,
+                'credits': rem_credits
             }), 200
             
+        # Check and deduct 1 credit for new PDF extraction
+        user_id = request.current_user['_id']
+        user_doc = db.users.find_one({'_id': user_id})
+        if not user_doc:
+            return jsonify({'message': 'User account not found.'}), 404
+        role = user_doc.get('role', 'user')
+        current_credits = user_doc.get('credits', 50)
+        if role != 'admin' and current_credits < 1:
+            return jsonify({'message': 'Insufficient AI credits. PDF extraction requires 1 credit.', 'credits': current_credits, 'required_credits': 1}), 402
+            
+        if role != 'admin':
+            current_credits -= 1
+            db.users.update_one({'_id': user_id}, {'$set': {'credits': current_credits}})
+        rem_credits = 999999 if role == 'admin' else current_credits
+        
         pdf_url = paper.get('pdf_url') or paper.get('external_pdf_url')
         if not pdf_url:
             return jsonify({'message': 'No PDF source link is available for this paper.'}), 400
@@ -233,7 +252,8 @@ def extract_paper_content():
         
         return jsonify({
             'message': 'Extraction and NLP processing completed successfully!',
-            'paper': updated_paper
+            'paper': updated_paper,
+            'credits': rem_credits
         }), 200
         
     except Exception as e:

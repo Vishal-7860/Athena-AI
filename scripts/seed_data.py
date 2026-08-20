@@ -55,6 +55,8 @@ def seed_database():
                 "email": test_email,
                 "password_hash": hashed_password,
                 "role": "admin",
+                "credits": 999999,
+                "max_credits": 999999,
                 "is_verified": True,
                 "created_at": datetime.datetime.utcnow(),
                 "updated_at": datetime.datetime.utcnow()
@@ -63,7 +65,11 @@ def seed_database():
             db.users.insert_one(admin_user)
             print(f"Seeded admin user: {test_email} / password: rabhvidh")
         else:
-            print(f"Admin user {test_email} already exists. Skipping seed.")
+            db.users.update_one(
+                {"_id": existing_user["_id"]},
+                {"$set": {"credits": 999999, "max_credits": 999999, "role": "admin"}}
+            )
+            print(f"Admin user {test_email} updated with unlimited credits.")
             
         print("Seeding completed successfully!")
         

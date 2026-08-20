@@ -19,8 +19,8 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
     
     # Configure Cross-Origin Resource Sharing
-    # Allow local React SPA requests during development
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # Allow React SPA requests during local development & production deployments
+    CORS(app, resources={r"/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     
     # Initialize Database
     try:
@@ -48,6 +48,16 @@ def create_app(config_class=Config):
     from app.admin.routes import admin_bp
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     
+    # Root service route
+    @app.route('/', methods=['GET'])
+    def root():
+        return jsonify({
+            'message': 'Athena AI Research Assistant REST API is active',
+            'version': '1.0.0',
+            'status_endpoint': '/api/status',
+            'database': 'connected' if init_db_success_check() else 'disconnected'
+        }), 200
+
     # Health check route
     @app.route('/api/status', methods=['GET'])
     def status():

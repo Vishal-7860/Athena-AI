@@ -41,12 +41,15 @@ def register():
     # Check if this is the first user in the system to assign 'admin' role
     user_count = db.users.count_documents({})
     role = 'admin' if user_count == 0 else 'user'
+    initial_credits = 999999 if role == 'admin' else 50
     
     user_document = {
         'username': username,
         'email': email,
         'password_hash': hash_password(password),
         'role': role,
+        'credits': initial_credits,
+        'max_credits': initial_credits,
         'is_verified': False,
         'created_at': datetime.datetime.utcnow(),
         'updated_at': datetime.datetime.utcnow()
@@ -64,7 +67,9 @@ def register():
         
         return jsonify({
             'message': 'Registration successful!',
-            'user_id': str(result.inserted_id)
+            'user_id': str(result.inserted_id),
+            'credits': initial_credits,
+            'max_credits': initial_credits
         }), 201
     except Exception as e:
         return jsonify({'message': f'Registration failed: {str(e)}'}), 500
@@ -82,28 +87,31 @@ def login():
     if db is None:
         return jsonify({'message': 'Database connection error!'}), 500
         
-    # Auto-seed admin user for local development convenience
-    if email == 'admin@example.com':
-        admin_user = db.users.find_one({'email': 'admin@example.com'})
+    # Auto-seed admin user for development and deployment convenience
+    if email in ['admin@example.com', 'admin@research.com']:
+        admin_user = db.users.find_one({'email': {'$in': ['admin@example.com', 'admin@research.com']}})
         if not admin_user:
             admin_document = {
                 'username': 'admin',
-                'email': 'admin@example.com',
+                'email': email,
                 'password_hash': hash_password('rabhvidh'),
                 'role': 'admin',
+                'credits': 999999,
+                'max_credits': 999999,
                 'is_verified': True,
                 'created_at': datetime.datetime.utcnow(),
                 'updated_at': datetime.datetime.utcnow()
             }
             db.users.insert_one(admin_document)
-            user = db.users.find_one({'email': 'admin@example.com'})
+            user = db.users.find_one({'email': email})
         else:
             user = admin_user
-            # Update admin@example.com password to 'rabhvidh' on valid login attempt
+            # Update password to 'rabhvidh' on valid attempt if needed
             if not check_password(password, user['password_hash']) and password == 'rabhvidh':
                 new_hash = hash_password('rabhvidh')
-                db.users.update_one({'_id': user['_id']}, {'$set': {'password_hash': new_hash}})
+                db.users.update_one({'_id': user['_id']}, {'$set': {'password_hash': new_hash, 'credits': 999999, 'max_credits': 999999}})
                 user['password_hash'] = new_hash
+                user['credits'] = 999999
     else:
         user = db.users.find_one({'email': email})
     
@@ -112,6 +120,8 @@ def login():
         
     user_id = str(user['_id'])
     role = user.get('role', 'user')
+    user_credits = user.get('credits', 999999 if role == 'admin' else 50)
+    max_credits = user.get('max_credits', 999999 if role == 'admin' else 50)
     
     access_token, refresh_token = generate_tokens(user_id, role)
     
@@ -130,7 +140,9 @@ def login():
             'id': user_id,
             'username': user['username'],
             'email': user['email'],
-            'role': role
+            'role': role,
+            'credits': user_credits,
+            'max_credits': max_credits
         }
     }), 200
 
@@ -163,13 +175,21 @@ def refresh():
 @auth_bp.route('/profile', methods=['GET'])
 @token_required
 def profile():
-    # request.current_user is already populated by @token_required decorator
-    user = request.current_user
+    db = get_db()
+    user_id = request.current_user['_id']
+    # Fetch fresh record from DB
+    user = db.users.find_one({'_id': user_id}) or request.current_user
+    role = user.get('role', 'user')
+    user_credits = user.get('credits', 999999 if role == 'admin' else 50)
+    max_credits = user.get('max_credits', 999999 if role == 'admin' else 50)
+    
     return jsonify({
         'id': str(user['_id']),
         'username': user['username'],
         'email': user['email'],
-        'role': user.get('role', 'user'),
+        'role': role,
+        'credits': user_credits,
+        'max_credits': max_credits,
         'created_at': user.get('created_at')
     }), 200
 
@@ -197,6 +217,10 @@ def update_profile():
             {'$set': {'username': new_username, 'email': new_email, 'updated_at': datetime.datetime.utcnow()}}
         )
         
+        # Fetch updated user doc
+        updated_user = db.users.find_one({'_id': user_id})
+        role = updated_user.get('role', 'user')
+        
         # Log this profile update activity
         db.logs.insert_one({
             'user_id': user_id,
@@ -208,7 +232,54 @@ def update_profile():
         return jsonify({
             'message': 'Profile updated successfully!',
             'username': new_username,
-            'email': new_email
+            'email': new_email,
+            'role': role,
+            'credits': updated_user.get('credits', 999999 if role == 'admin' else 50),
+            'max_credits': updated_user.get('max_credits', 999999 if role == 'admin' else 50)
         }), 200
     except Exception as e:
         return jsonify({'message': f'Failed to update profile: {str(e)}'}), 500
+
+@auth_bp.route('/claim-credits', methods=['POST'])
+@token_required
+def claim_credits():
+    db = get_db()
+    user_id = request.current_user['_id']
+    user = db.users.find_one({'_id': user_id})
+    if not user:
+        return jsonify({'message': 'User not found.'}), 404
+        
+    role = user.get('role', 'user')
+    if role == 'admin':
+        return jsonify({
+            'message': 'Admin account has unlimited credits!',
+            'credits': 999999,
+            'max_credits': 999999
+        }), 200
+        
+    current_credits = user.get('credits', 50)
+    max_credits = user.get('max_credits', 50)
+    bonus_amount = 10
+    
+    new_credits = min(current_credits + bonus_amount, max_credits + bonus_amount)
+    new_max = max(max_credits, new_credits)
+    
+    db.users.update_one(
+        {'_id': user_id},
+        {'$set': {'credits': new_credits, 'max_credits': new_max, 'last_claimed': datetime.datetime.utcnow()}}
+    )
+    
+    # Log activity
+    db.logs.insert_one({
+        'user_id': user_id,
+        'action': 'CREDITS_CLAIMED',
+        'details': f"Claimed +{bonus_amount} bonus credits. Total credits: {new_credits}",
+        'timestamp': datetime.datetime.utcnow()
+    })
+    
+    return jsonify({
+        'message': f'Successfully claimed +{bonus_amount} AI Credits!',
+        'credits': new_credits,
+        'max_credits': new_max
+    }), 200
+

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 import api from '../services/api';
 import { 
   Users, 
@@ -279,6 +280,149 @@ export default function Admin() {
           </div>
         </div>
       </div>
+
+      {/* User Management & Credit Allocation Section */}
+      <UserCreditManagementTable />
     </div>
   );
 }
+
+function UserCreditManagementTable() {
+  const [editingUserId, setEditingUserId] = React.useState(null);
+  const [newCredits, setNewCredits] = React.useState('');
+  const [updating, setUpdating] = React.useState(false);
+
+  const { data: userList = [], refetch: refetchUsers, isLoading } = useQuery({
+    queryKey: ['adminUserList'],
+    queryFn: async () => {
+      const response = await api.get('/admin/users');
+      return response.data || [];
+    }
+  });
+
+  const handleAllocate = async (userId) => {
+    const val = parseInt(newCredits, 10);
+    if (isNaN(val) || val < 0) {
+      toast.warning('Please enter a valid non-negative credit number.');
+      return;
+    }
+    setUpdating(true);
+    try {
+      const res = await api.post(`/admin/users/${userId}/credits`, { credits: val });
+      toast.success(res.data?.message || 'Credits allocated successfully!');
+      setEditingUserId(null);
+      setNewCredits('');
+      refetchUsers();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update user credits.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  return (
+    <div className="glass-panel border border-slate-200/50 dark:border-slate-800/50 rounded-xl p-6 shadow-sm space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <Users size={20} className="text-brand-500" />
+            User Management & Credit Allocation
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            View registered user accounts and directly allocate AI credits.
+          </p>
+        </div>
+        <button
+          onClick={() => refetchUsers()}
+          className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg transition"
+        >
+          Refresh Users
+        </button>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+          <thead className="bg-slate-50 dark:bg-slate-900 uppercase text-[10px] font-bold text-slate-400 border-b border-slate-200 dark:border-slate-800">
+            <tr>
+              <th className="p-3">User</th>
+              <th className="p-3">Email</th>
+              <th className="p-3">Role</th>
+              <th className="p-3">Credits Balance</th>
+              <th className="p-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-850">
+            {isLoading ? (
+              <tr>
+                <td colSpan="5" className="p-4 text-center text-slate-400">Loading user records...</td>
+              </tr>
+            ) : userList.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="p-4 text-center text-slate-400">No users found.</td>
+              </tr>
+            ) : (
+              userList.map((u) => (
+                <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                  <td className="p-3 font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold text-[10px] uppercase">
+                      {u.username[0] || 'U'}
+                    </div>
+                    {u.username}
+                  </td>
+                  <td className="p-3 text-slate-500 dark:text-slate-400">{u.email}</td>
+                  <td className="p-3 capitalize">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      u.role === 'admin' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                    }`}>
+                      {u.role}
+                    </span>
+                  </td>
+                  <td className="p-3 font-bold text-amber-500">
+                    {u.role === 'admin' ? '∞ Unlimited' : `${u.credits} / ${u.max_credits}`}
+                  </td>
+                  <td className="p-3 text-right">
+                    {editingUserId === u.id ? (
+                      <div className="flex items-center justify-end gap-1.5">
+                        <input
+                          type="number"
+                          placeholder="Credits"
+                          value={newCredits}
+                          onChange={(e) => setNewCredits(e.target.value)}
+                          className="w-20 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-xs focus:outline-none"
+                        />
+                        <button
+                          onClick={() => handleAllocate(u.id)}
+                          disabled={updating}
+                          className="px-2.5 py-1 bg-brand-600 text-white rounded text-xs font-bold hover:bg-brand-700 disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingUserId(null)}
+                          className="px-2 py-1 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded text-xs"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setEditingUserId(u.id);
+                          setNewCredits(String(u.credits));
+                        }}
+                        className="px-3 py-1 bg-brand-500/10 text-brand-600 dark:text-brand-400 hover:bg-brand-500/20 rounded font-semibold text-xs transition"
+                      >
+                        Allocate Credits
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+

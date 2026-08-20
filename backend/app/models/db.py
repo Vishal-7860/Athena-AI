@@ -35,6 +35,7 @@ def init_db(app):
         
         # Create schema constraints and indexes
         _create_indexes()
+        _migrate_user_credits()
         
     except Exception as e:
         logger.critical(f"Could not connect to MongoDB database. Error: {e}")
@@ -108,3 +109,26 @@ def get_db():
     """
     global db
     return db
+
+def _migrate_user_credits():
+    """
+    Ensure all users have credits and max_credits initialized.
+    """
+    global db
+    if db is None:
+        return
+    try:
+        # Standard users without credits field
+        db.users.update_many(
+            {'credits': {'$exists': False}, 'role': {'$ne': 'admin'}},
+            {'$set': {'credits': 50, 'max_credits': 50}}
+        )
+        # Admin users without credits field
+        db.users.update_many(
+            {'credits': {'$exists': False}, 'role': 'admin'},
+            {'$set': {'credits': 999999, 'max_credits': 999999}}
+        )
+        logger.info("Migrated user credits successfully.")
+    except Exception as e:
+        logger.error(f"Error during credit migration: {e}")
+

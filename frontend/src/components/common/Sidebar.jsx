@@ -8,11 +8,16 @@ import {
   ShieldCheck, 
   LogOut,
   Sparkles,
-  Settings
+  Settings,
+  Zap
 } from 'lucide-react';
 
 export default function Sidebar() {
   const { user, logout, isAdmin } = useAuth();
+
+  const credits = user?.credits ?? 50;
+  const maxCredits = user?.max_credits ?? 50;
+  const creditPercent = isAdmin ? 100 : Math.min(100, Math.max(0, Math.round((credits / maxCredits) * 100)));
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -77,6 +82,29 @@ export default function Sidebar() {
         )}
       </nav>
 
+      {/* Credit Allocation Progress Card */}
+      <div className="px-4 py-3 border-t border-slate-900/80 bg-slate-950/40">
+        <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 space-y-2">
+          <div className="flex items-center justify-between text-xs font-semibold">
+            <span className="text-slate-400 flex items-center gap-1.5">
+              <Zap size={13} className="text-amber-400 fill-amber-400" />
+              AI Credits
+            </span>
+            <span className="text-amber-400 font-bold">
+              {isAdmin ? '∞' : `${credits} / ${maxCredits}`}
+            </span>
+          </div>
+          {!isAdmin && (
+            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-amber-400 to-brand-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${creditPercent}%` }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* User Section / Logout */}
       <div className="p-4 border-t border-slate-900 bg-slate-950/20">
         <div className="flex items-center gap-3 mb-4 px-2">
@@ -99,3 +127,4 @@ export default function Sidebar() {
     </aside>
   );
 }
+

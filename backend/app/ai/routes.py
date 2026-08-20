@@ -7,6 +7,20 @@ from app.ai.gemini_service import generate_paper_summary, generate_literature_sy
 
 ai_bp = Blueprint('ai', __name__)
 
+def check_and_deduct_credits(db, user_id, cost):
+    user = db.users.find_one({'_id': user_id})
+    if not user:
+        return False, 0, "User account not found."
+    role = user.get('role', 'user')
+    if role == 'admin':
+        return True, 999999, None
+    current_credits = user.get('credits', 50)
+    if current_credits < cost:
+        return False, current_credits, f"Insufficient AI credits. This action requires {cost} credit(s), but you currently have {current_credits} credit(s)."
+    new_credits = current_credits - cost
+    db.users.update_one({'_id': user_id}, {'$set': {'credits': new_credits}})
+    return True, new_credits, None
+
 @ai_bp.route('/summarize', methods=['POST'])
 @token_required
 def summarize_paper():
@@ -42,18 +56,30 @@ def summarize_paper():
         
         # We can store multiple format summaries in one document
         if existing_summary and existing_summary.get(f'{format_type}_summary'):
+            user_doc = db.users.find_one({'_id': user_id})
+            role = user_doc.get('role', 'user') if user_doc else 'user'
+            rem_credits = user_doc.get('credits', 999999 if role == 'admin' else 50) if user_doc else 50
             return jsonify({
                 'message': 'Loaded cached summary.',
                 'summary': existing_summary[f'{format_type}_summary'],
                 'format': format_type,
-                'paper_id': paper_id
+                'paper_id': paper_id,
+                'credits': rem_credits
             }), 200
+            
+        # Check and deduct 1 credit for new summary generation
+        success, rem_credits, err_msg = check_and_deduct_credits(db, user_id, 1)
+        if not success:
+            return jsonify({'message': err_msg, 'credits': rem_credits, 'required_credits': 1}), 402
             
         # Trigger Gemini summary creation
         res = generate_paper_summary(paper['title'], sections, format_type)
         summary_text = res.get('summary_text', '')
         
         if not summary_text:
+            # Refund credit if failed
+            if request.current_user.get('role') != 'admin':
+                db.users.update_one({'_id': user_id}, {'$inc': {'credits': 1}})
             return jsonify({'message': 'Failed to generate summary content.'}), 500
             
         # Save / Cache to DB
@@ -93,7 +119,8 @@ def summarize_paper():
             'summary': summary_text,
             'format': format_type,
             'paper_id': paper_id,
-            'is_fallback': res.get('fallback', False)
+            'is_fallback': res.get('fallback', False),
+            'credits': rem_credits
         }), 200
         
     except Exception as e:
@@ -137,6 +164,11 @@ def generate_review():
                     'unextracted_paper_id': str(paper['_id'])
                 }), 400
                 
+        # Check and deduct 3 credits for literature review synthesis
+        success, rem_credits, err_msg = check_and_deduct_credits(db, user_id, 3)
+        if not success:
+            return jsonify({'message': err_msg, 'credits': rem_credits, 'required_credits': 3}), 402
+            
         # Trigger literature review synthesis
         review_data = generate_literature_synthesis(papers_list)
         
@@ -169,8 +201,10 @@ def generate_review():
         review_data['review_id'] = str(result.inserted_id)
         review_data['title'] = title
         review_data['message'] = 'Literature review compiled successfully!'
+        review_data['credits'] = rem_credits
         
         return jsonify(review_data), 200
         
     except Exception as e:
         return jsonify({'message': f'Review synthesis failed: {str(e)}'}), 500
+

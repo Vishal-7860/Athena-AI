@@ -1,7 +1,17 @@
 import axios from 'axios';
 
+const getApiBaseUrl = () => {
+  let envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (!envUrl) return '/api';
+  envUrl = envUrl.trim().replace(/\/+$/, '');
+  if (!envUrl.endsWith('/api')) {
+    envUrl += '/api';
+  }
+  return envUrl;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -35,7 +45,7 @@ api.interceptors.response.use(
       if (refreshToken) {
         try {
           // Perform refreshing using basic fetch or separate axios instance to avoid infinite loop
-          const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/refresh`, {
+          const response = await axios.post(`${getApiBaseUrl()}/auth/refresh`, {
             refresh_token: refreshToken
           });
           

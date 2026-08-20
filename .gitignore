@@ -37,3 +37,5 @@ uploads/
 .idea/
 .DS_Store
 Thumbs.db
+*.timestamp-*.mjs
+*.log

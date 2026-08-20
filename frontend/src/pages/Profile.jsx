@@ -13,17 +13,20 @@ import {
   Sun, 
   Save, 
   Bookmark, 
-  FileText
+  FileText,
+  Zap,
+  PlusCircle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 export default function Profile() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, claimDailyBonus, isAdmin } = useAuth();
   const [apiKey, setApiKey] = useState('');
   const [darkMode, setDarkMode] = useState(false);
   const [username, setUsername] = useState(user?.username || '');
   const [email, setEmail] = useState(user?.email || '');
   const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [claiming, setClaiming] = useState(false);
 
   // Load custom API key and theme from localStorage on mount
   useEffect(() => {
@@ -48,6 +51,18 @@ export default function Profile() {
     e.preventDefault();
     localStorage.setItem('custom_gemini_key', apiKey.trim());
     toast.success('Custom Gemini API Key saved locally!');
+  };
+
+  const handleClaimBonus = async () => {
+    setClaiming(true);
+    try {
+      const res = await claimDailyBonus();
+      toast.success(res.message || 'Claimed +10 AI Credits!');
+    } catch (err) {
+      toast.error(err || 'Failed to claim credits.');
+    } finally {
+      setClaiming(false);
+    }
   };
 
   const toggleTheme = () => {
@@ -86,16 +101,19 @@ export default function Profile() {
     }
   };
 
+  const credits = user?.credits ?? 50;
+  const maxCredits = user?.max_credits ?? 50;
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
           <Settings size={28} className="text-brand-500" />
-          Account Settings
+          Account Settings & AI Credits
         </h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Manage your researcher profile, API integrations, and workspace preferences.
+          Manage your researcher profile, view AI credits allocation, and configure workspace preferences.
         </p>
       </div>
 
@@ -138,7 +156,7 @@ export default function Profile() {
             <div className="p-2 rounded bg-slate-50 dark:bg-slate-900/50">
               <span className="text-[10px] uppercase font-bold text-slate-400 block">Tier</span>
               <span className="text-sm font-bold text-slate-800 dark:text-white uppercase mt-1 block">
-                Free Academic
+                {isAdmin ? 'PRO ADMIN' : 'ACADEMIC'}
               </span>
             </div>
           </div>
@@ -146,6 +164,57 @@ export default function Profile() {
 
         {/* Configuration settings */}
         <div className="md:col-span-2 space-y-6">
+          {/* AI Credits & Subscription Card */}
+          <div className="glass-panel border border-slate-200/50 dark:border-slate-800/50 rounded-xl p-6 shadow-sm space-y-4 bg-gradient-to-br from-amber-500/5 via-transparent to-brand-500/5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <Zap size={20} className="text-amber-500 fill-amber-500" />
+                AI Credits & Allocation Status
+              </h3>
+              {!isAdmin && (
+                <button
+                  onClick={handleClaimBonus}
+                  disabled={claiming}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-sm transition disabled:opacity-50 cursor-pointer"
+                >
+                  <PlusCircle size={14} />
+                  {claiming ? 'Claiming...' : 'Claim Daily Bonus (+10)'}
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+              <div className="p-4 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Remaining Balance</span>
+                <div className="text-3xl font-extrabold text-slate-900 dark:text-white mt-1 flex items-baseline gap-1">
+                  <span>{isAdmin ? '∞' : credits}</span>
+                  <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+                    {isAdmin ? 'Unlimited' : `/ ${maxCredits} Allocated`}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between font-semibold">
+                  <span className="text-slate-600 dark:text-slate-400">Resource Consumption:</span>
+                </div>
+                <div className="space-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  <div className="flex justify-between">
+                    <span>PDF Extraction:</span>
+                    <strong className="text-slate-700 dark:text-slate-300">1 Credit</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>AI Paper Summary:</span>
+                    <strong className="text-slate-700 dark:text-slate-300">1 Credit</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Literature Synthesis:</span>
+                    <strong className="text-slate-700 dark:text-slate-300">3 Credits</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           {/* Profile Updates Form */}
           <div className="glass-panel border border-slate-200/50 dark:border-slate-800/50 rounded-xl p-6 shadow-sm space-y-4">
             <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
