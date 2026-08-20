@@ -89,18 +89,6 @@ export default function LiteratureReview() {
       return;
     }
     
-    // Ensure selected papers are extracted
-    const unextracted = bookmarks.filter(
-      b => selectedPapers.includes(b.paper.id) && !b.paper.extracted_sections
-    );
-    
-    if (unextracted.length > 0) {
-      // Trigger extraction on the first unextracted paper automatically
-      toast.info(`Extracting sections from '${unextracted[0].paper.title}'...`);
-      runExtraction(unextracted[0].paper.id);
-      return;
-    }
-    
     reviewMutation.mutate(selectedPapers);
   };
 

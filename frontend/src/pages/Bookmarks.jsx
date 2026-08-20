@@ -93,22 +93,6 @@ export default function Bookmarks() {
   // 4. Generate AI Summary Mutation
   const summaryMutation = useMutation({
     mutationFn: async ({ paperId, format }) => {
-      // Find corresponding bookmarked paper to see if it requires section extraction
-      const bookmark = bookmarks?.find(b => b.paper.id === paperId);
-      if (bookmark && !bookmark.paper.extracted_sections) {
-        try {
-          toast.info(`Extracting sections from '${bookmark.paper.title}'...`);
-          const extRes = await api.post('/papers/extract', { paper_id: paperId });
-          if (extRes.data?.credits !== undefined) {
-            updateCredits(extRes.data.credits);
-          }
-          queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
-        } catch (e) {
-          // Non-blocking fallback to metadata abstract summarization if PDF extraction fails
-          console.warn('PDF extraction skipped or failed, using metadata fallback:', e);
-        }
-      }
-
       const response = await api.post('/ai/summarize', {
         paper_id: paperId,
         format: format
