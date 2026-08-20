@@ -72,12 +72,35 @@ def get_bookmarks():
     db = get_db()
     user_id = request.current_user['_id']
     
-    bookmarks = list(db.bookmarks.find({'user_id': user_id}))
+    user_id_str = str(user_id)
+    try:
+        user_id_obj = ObjectId(user_id_str)
+    except Exception:
+        user_id_obj = user_id
+
+    bookmarks = list(db.bookmarks.find({
+        '$or': [
+            {'user_id': user_id},
+            {'user_id': user_id_str},
+            {'user_id': user_id_obj}
+        ]
+    }))
     
     results = []
     for b in bookmarks:
-        # Resolve associated paper data
-        paper = db.research_papers.find_one({'_id': b['paper_id']})
+        paper_id_raw = b.get('paper_id')
+        if not paper_id_raw:
+            continue
+            
+        paper = None
+        try:
+            if isinstance(paper_id_raw, ObjectId):
+                paper = db.research_papers.find_one({'_id': paper_id_raw})
+            else:
+                paper = db.research_papers.find_one({'_id': ObjectId(str(paper_id_raw))})
+        except Exception:
+            paper = db.research_papers.find_one({'_id': paper_id_raw})
+
         if paper:
             # Map object ID to string
             paper['id'] = str(paper['_id'])

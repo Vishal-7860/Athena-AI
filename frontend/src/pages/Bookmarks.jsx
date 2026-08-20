@@ -162,10 +162,30 @@ export default function Bookmarks() {
         <p className="text-sm text-slate-500 dark:text-slate-400">Could not retrieve saved books/papers.</p>
         <button 
           onClick={() => refetch()}
-          className="mt-2 flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition"
+          className="mt-2 flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition cursor-pointer"
         >
           <RefreshCw size={16} /> Reconnect
         </button>
+      </div>
+    );
+  }
+
+  if (!bookmarks || bookmarks.length === 0) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-4 text-center max-w-md mx-auto">
+        <div className="w-16 h-16 rounded-full bg-brand-500/10 text-brand-500 flex items-center justify-center mb-2">
+          <Bookmark size={32} />
+        </div>
+        <h3 className="text-xl font-bold text-slate-800 dark:text-white">Your Library is Empty</h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          You haven't bookmarked any research papers yet. Search for publications and bookmark them to save to your personal collection!
+        </p>
+        <a 
+          href="/search" 
+          className="mt-2 flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-sm transition shadow-md"
+        >
+          Explore & Search Papers
+        </a>
       </div>
     );
   }
