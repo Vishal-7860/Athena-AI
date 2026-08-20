@@ -13,7 +13,7 @@ load_dotenv() # also check root
 from pymongo import MongoClient
 import bcrypt
 
-def seed_database():
+def seed_database(reset=False):
     mongo_uri = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/ai_research_db')
     print(f"Connecting to MongoDB: {mongo_uri}")
     
@@ -26,7 +26,19 @@ def seed_database():
         client.admin.command('ping')
         print("Connected successfully!")
         
-        # Drop users collection to reset if requested, or just insert if not exists
+        if reset or '--reset' in sys.argv:
+            print("Purging old database collections...")
+            db.users.drop()
+            db.research_papers.drop()
+            db.bookmarks.drop()
+            db.summaries.drop()
+            db.literature_reviews.drop()
+            db.search_history.drop()
+            db.logs.drop()
+            db.downloads.drop()
+            print("Old data purged cleanly.")
+        
+        # Create collections and indexes
         print("Creating collections and indexes...")
         try:
             db.users.create_index("email", unique=True)
@@ -63,7 +75,7 @@ def seed_database():
             }
             
             db.users.insert_one(admin_user)
-            print(f"Seeded admin user: {test_email} / password: rabhvidh")
+            print(f"Seeded fresh admin user: {test_email} / password: rabhvidh")
         else:
             db.users.update_one(
                 {"_id": existing_user["_id"]},
@@ -71,11 +83,13 @@ def seed_database():
             )
             print(f"Admin user {test_email} updated with unlimited credits.")
             
-        print("Seeding completed successfully!")
+        print("Database seeding completed successfully!")
         
     except Exception as e:
         print(f"Error seeding database: {e}")
         sys.exit(1)
 
 if __name__ == '__main__':
-    seed_database()
+    reset_flag = '--reset' in sys.argv or 'reset' in sys.argv
+    seed_database(reset=reset_flag)
+
