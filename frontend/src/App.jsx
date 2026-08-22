@@ -17,6 +17,7 @@ import LiteratureReview from './pages/LiteratureReview';
 import Bookmarks from './pages/Bookmarks';
 import Admin from './pages/Admin';
 import Profile from './pages/Profile';
+import NotFound from './pages/NotFound';
 
 export default function App() {
   return (
@@ -36,11 +37,11 @@ export default function App() {
           <Route path="/bookmarks" element={<Bookmarks />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="*" element={<NotFound />} />
         </Route>
 
         {/* Fallbacks */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
       
       {/* Toast Notification Container */}

@@ -54,6 +54,9 @@ def create_app(config_class=Config):
         from flask import send_from_directory
         import os
         uploads_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../uploads'))
+        target_path = os.path.join(uploads_dir, filename)
+        if not os.path.exists(target_path):
+            return jsonify({'message': f'Uploaded file {filename} not found on server.', 'status': 404}), 404
         return send_from_directory(uploads_dir, filename)
 
     # Root service route
@@ -74,7 +77,21 @@ def create_app(config_class=Config):
             'service': 'AI-Research-System Backend',
             'database': 'connected' if init_db_success_check() else 'disconnected'
         }), 200
-        
+
+    # 404 Error Handler & SPA Fallback Route
+    @app.errorhandler(404)
+    def handle_404(e):
+        from flask import request, send_from_directory
+        import os
+        if request.path.startswith('/api/'):
+            return jsonify({'message': f'API endpoint {request.path} not found.', 'status': 404}), 404
+        if request.path.startswith('/uploads/'):
+            return jsonify({'message': 'Requested PDF document not found on server.', 'status': 404}), 404
+        dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../frontend/dist'))
+        if os.path.exists(os.path.join(dist_dir, 'index.html')):
+            return send_from_directory(dist_dir, 'index.html')
+        return jsonify({'message': 'Resource or page not found', 'status': 404}), 404
+
     return app
 
 def init_db_success_check():
