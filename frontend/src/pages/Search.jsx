@@ -79,8 +79,12 @@ export default function Search() {
     },
     onSuccess: (data) => {
       toast.success('PDF successfully saved to library!');
-      // Redirect to AI Summary interface for this paper
-      navigate('/dashboard'); // Temporarily go to dashboard, or we can send to summary page in Phase 6
+      // Redirect to saved paper in Bookmarks library
+      if (data.paper_id) {
+        navigate(`/bookmarks?paperId=${data.paper_id}`);
+      } else {
+        navigate('/bookmarks');
+      }
     },
     onError: (err) => {
       toast.error(err.response?.data?.message || 'Failed to download and sync PDF.');

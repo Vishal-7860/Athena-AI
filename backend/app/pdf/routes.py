@@ -151,8 +151,14 @@ def extract_paper_content():
         user_doc = db.users.find_one({'_id': user_id})
         if not user_doc:
             return jsonify({'message': 'User account not found.'}), 404
-        role = user_doc.get('role', 'user')
-        current_credits = user_doc.get('credits', 50)
+        if isinstance(user_doc, dict):
+            role = user_doc.get('role', 'user')
+            current_credits = user_doc.get('credits', 50)
+        else:
+            role = 'user'
+            current_credits = 50
+        if not isinstance(current_credits, (int, float)):
+            current_credits = 50
         if role != 'admin' and current_credits < 1:
             return jsonify({'message': 'Insufficient AI credits. PDF extraction requires 1 credit.', 'credits': current_credits, 'required_credits': 1}), 402
             

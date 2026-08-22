@@ -13,7 +13,9 @@ import {
   TrendingUp,
   Bookmark,
   Activity,
-  CreditCard
+  CreditCard,
+  Download,
+  FileText
 } from 'lucide-react';
 
 export default function LiteratureReview() {
@@ -90,6 +92,35 @@ export default function LiteratureReview() {
     }
     
     reviewMutation.mutate(selectedPapers);
+  };
+
+  const handleExport = async (type = 'pdf') => {
+    if (!reviewData?.review_id) {
+      toast.error('No compiled review record available for export.');
+      return;
+    }
+    try {
+      toast.info(`Preparing ${type.toUpperCase()} download...`);
+      const response = await api.get(`/papers/export?review_id=${reviewData.review_id}&type=${type}`, {
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], { 
+        type: type === 'docx' 
+          ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+          : 'application/pdf' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${(reviewTitle || 'Literature_Review').replace(/\s+/g, '_')}.${type}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success(`${type.toUpperCase()} report exported successfully!`);
+    } catch (err) {
+      toast.error(`Failed to export ${type.toUpperCase()} report.`);
+    }
   };
 
   // Helper mutation to run section parsing if they haven't been processed yet
@@ -223,38 +254,55 @@ export default function LiteratureReview() {
             </div>
           ) : (
             <div className="glass-panel rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[400px]">
-              {/* Tab Navigation */}
-              <div className="flex border-b border-slate-200 dark:border-slate-800 px-6 bg-slate-50/50 dark:bg-slate-900/50">
-                <button
-                  onClick={() => setActiveTab('synthesis')}
-                  className={`py-4 px-4 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
-                    activeTab === 'synthesis'
-                      ? 'border-brand-500 text-brand-500'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
-                >
-                  Synthesis Review
-                </button>
-                <button
-                  onClick={() => setActiveTab('table')}
-                  className={`py-4 px-4 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
-                    activeTab === 'table'
-                      ? 'border-brand-500 text-brand-500'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
-                >
-                  Comparison Table
-                </button>
-                <button
-                  onClick={() => setActiveTab('similarity')}
-                  className={`py-4 px-4 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
-                    activeTab === 'similarity'
-                      ? 'border-brand-500 text-brand-500'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
-                >
-                  Semantic Similarity
-                </button>
+              {/* Tab Navigation & Export Actions */}
+              <div className="flex flex-wrap items-center justify-between border-b border-slate-200 dark:border-slate-800 px-6 bg-slate-50/50 dark:bg-slate-900/50 gap-2">
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setActiveTab('synthesis')}
+                    className={`py-4 px-4 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+                      activeTab === 'synthesis'
+                        ? 'border-brand-500 text-brand-500'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    Synthesis Review
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('table')}
+                    className={`py-4 px-4 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+                      activeTab === 'table'
+                        ? 'border-brand-500 text-brand-500'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    Comparison Table
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('similarity')}
+                    className={`py-4 px-4 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+                      activeTab === 'similarity'
+                        ? 'border-brand-500 text-brand-500'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    Semantic Similarity
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 py-2">
+                  <button
+                    onClick={() => handleExport('pdf')}
+                    className="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <Download size={13} /> Export PDF Report
+                  </button>
+                  <button
+                    onClick={() => handleExport('docx')}
+                    className="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <FileText size={13} /> Export DOCX
+                  </button>
+                </div>
               </div>
 
               {/* Tab Contents */}

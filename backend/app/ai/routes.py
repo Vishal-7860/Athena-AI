@@ -11,10 +11,16 @@ def check_and_deduct_credits(db, user_id, cost):
     user = db.users.find_one({'_id': user_id})
     if not user:
         return False, 0, "User account not found."
-    role = user.get('role', 'user')
+    if isinstance(user, dict):
+        role = user.get('role', 'user')
+        current_credits = user.get('credits', 50)
+    else:
+        role = 'user'
+        current_credits = 50
+    if not isinstance(current_credits, (int, float)):
+        current_credits = 50
     if role == 'admin':
         return True, 999999, None
-    current_credits = user.get('credits', 50)
     if current_credits < cost:
         return False, current_credits, f"Insufficient AI credits. This action requires {cost} credit(s), but you currently have {current_credits} credit(s)."
     new_credits = current_credits - cost

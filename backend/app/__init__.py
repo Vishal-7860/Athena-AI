@@ -48,6 +48,14 @@ def create_app(config_class=Config):
     from app.admin.routes import admin_bp
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     
+    # Serve uploaded PDF documents
+    @app.route('/uploads/<path:filename>', methods=['GET'])
+    def serve_uploads(filename):
+        from flask import send_from_directory
+        import os
+        uploads_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../uploads'))
+        return send_from_directory(uploads_dir, filename)
+
     # Root service route
     @app.route('/', methods=['GET'])
     def root():

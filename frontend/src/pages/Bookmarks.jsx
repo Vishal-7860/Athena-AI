@@ -17,7 +17,9 @@ import {
   Copy,
   Check,
   RefreshCw,
-  HelpCircle
+  HelpCircle,
+  Eye,
+  FileText
 } from 'lucide-react';
 
 const parseMarkdownBold = (text) => {
@@ -41,6 +43,15 @@ export default function Bookmarks() {
   const [summaryPaper, setSummaryPaper] = useState(null);
   const [summaryFormat, setSummaryFormat] = useState('detailed');
   const [generatedSummary, setGeneratedSummary] = useState(null);
+  const [pdfPreview, setPdfPreview] = useState(null); // { url, title }
+
+  const resolvePdfUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+    const origin = apiBase ? apiBase.replace(/\/api\/?$/, '') : '';
+    return `${origin}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
 
   // Read URL search params to auto-open paper
   const [searchParams] = useSearchParams();
@@ -290,25 +301,43 @@ export default function Bookmarks() {
                 {/* Right block: Action Controllers */}
                 <div className="flex flex-row lg:flex-col justify-start lg:justify-center items-center gap-2.5 lg:border-l lg:border-slate-200/50 lg:dark:border-slate-800/50 lg:pl-6 shrink-0 flex-wrap">
                   {p.pdf_url ? (
-                    <button
-                      onClick={() => handleOpenSummary(p)}
-                      className="flex items-center justify-center gap-2 w-full sm:w-auto lg:w-40 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition shadow-sm"
-                    >
-                      <Sparkles size={14} /> AI Summary
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleOpenSummary(p)}
+                        className="flex items-center justify-center gap-2 w-full sm:w-auto lg:w-40 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                      >
+                        <Sparkles size={14} /> AI Summary
+                      </button>
+                      <button
+                        onClick={() => setPdfPreview({ url: resolvePdfUrl(p.pdf_url), title: p.title })}
+                        className="flex items-center justify-center gap-2 w-full sm:w-auto lg:w-40 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                      >
+                        <Eye size={14} /> View Saved PDF
+                      </button>
+                    </>
                   ) : (
-                    <button
-                      disabled={downloadMutation.isPending}
-                      onClick={() => downloadMutation.mutate(p)}
-                      className="flex items-center justify-center gap-2 w-full sm:w-auto lg:w-40 px-3.5 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-500 hover:border-brand-500/40 rounded-lg text-xs font-bold transition"
-                    >
-                      <Download size={14} /> Download PDF
-                    </button>
+                    <>
+                      <button
+                        disabled={downloadMutation.isPending}
+                        onClick={() => downloadMutation.mutate(p)}
+                        className="flex items-center justify-center gap-2 w-full sm:w-auto lg:w-40 px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
+                      >
+                        <Download size={14} /> Download PDF
+                      </button>
+                      {p.external_pdf_url && (
+                        <button
+                          onClick={() => setPdfPreview({ url: resolvePdfUrl(p.external_pdf_url), title: p.title })}
+                          className="flex items-center justify-center gap-2 w-full sm:w-auto lg:w-40 px-3.5 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-500 hover:border-brand-500/40 rounded-lg text-xs font-bold transition cursor-pointer"
+                        >
+                          <Eye size={14} /> View PDF
+                        </button>
+                      )}
+                    </>
                   )}
 
                   <button
                     onClick={() => setSelectedCitation(p)}
-                    className="flex items-center justify-center gap-2 w-full sm:w-auto lg:w-40 px-3.5 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-500 hover:border-brand-500/40 rounded-lg text-xs font-bold transition"
+                    className="flex items-center justify-center gap-2 w-full sm:w-auto lg:w-40 px-3.5 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-brand-500 hover:border-brand-500/40 rounded-lg text-xs font-bold transition cursor-pointer"
                   >
                     <Quote size={14} /> Cite Paper
                   </button>
@@ -326,7 +355,7 @@ export default function Bookmarks() {
 
                   <button
                     onClick={() => removeMutation.mutate(bookmark.id)}
-                    className="flex items-center justify-center gap-2 w-full sm:w-auto lg:w-40 px-3.5 py-2 bg-red-500/10 hover:bg-red-500 text-red-600 hover:text-white rounded-lg text-xs font-bold transition border border-transparent"
+                    className="flex items-center justify-center gap-2 w-full sm:w-auto lg:w-40 px-3.5 py-2 bg-red-500/10 hover:bg-red-500 text-red-600 hover:text-white rounded-lg text-xs font-bold transition border border-transparent cursor-pointer"
                   >
                     <Trash2 size={14} /> Remove Saved
                   </button>
@@ -478,6 +507,50 @@ export default function Bookmarks() {
                 Summary loading failed or not triggered.
               </div>
             )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* IN-APP PDF PREVIEW MODAL */}
+      {pdfPreview && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 animate-fade-in">
+          <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-6xl h-[88vh] shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0 pr-4">
+                <FileText className="text-brand-500 shrink-0" size={22} />
+                <div>
+                  <h3 className="text-sm md:text-base font-bold text-slate-900 dark:text-white truncate max-w-xl">
+                    {pdfPreview.title}
+                  </h3>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">PDF Reader Preview</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <a
+                  href={pdfPreview.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition shadow-sm"
+                >
+                  <ExternalLink size={13} /> Open / Download PDF
+                </a>
+                <button 
+                  onClick={() => setPdfPreview(null)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 bg-slate-100 dark:bg-slate-900 p-2 overflow-hidden">
+              <iframe
+                src={pdfPreview.url}
+                className="w-full h-full rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-inner"
+                title="PDF Document Viewer"
+              />
+            </div>
           </div>
         </div>,
         document.body
